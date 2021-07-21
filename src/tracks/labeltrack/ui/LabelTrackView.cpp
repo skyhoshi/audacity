@@ -8,10 +8,8 @@ Paul Licameli split from TrackPanel.cpp
 
 **********************************************************************/
 
-#include "../../../Audacity.h"
-#include "LabelTrackView.h"
 
-#include "../../../Experimental.h"
+#include "LabelTrackView.h"
 
 #include "LabelTrackVRulerControls.h"
 #include "LabelGlyphHandle.h"
@@ -34,7 +32,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../TrackPanelMouseEvent.h"
 #include "../../../UndoManager.h"
 #include "../../../ViewInfo.h"
-#include "../../../widgets/ErrorDialog.h"
+#include "../../../widgets/AudacityTextEntryDialog.h"
 
 #include <wx/clipbrd.h>
 #include <wx/dcclient.h>

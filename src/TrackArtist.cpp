@@ -38,10 +38,10 @@ audio tracks.
 
 *//*******************************************************************/
 
-#include "Audacity.h" // for USE_* macros and HAVE_ALLOCA_H
+
 #include "TrackArtist.h"
 
-#include "Experimental.h"
+
 
 #include "AColor.h"
 #include "AllThemeResources.h"
@@ -55,6 +55,9 @@ audio tracks.
 #include "prefs/TracksPrefs.h"
 
 #include <wx/dc.h>
+
+//Thickness of the clip frame outline, shown when clip is dragged
+static constexpr int ClipSelectionStrokeSize{ 1 };//px
 
 TrackArtist::TrackArtist( TrackPanel *parent_ )
    : parent( parent_ )
@@ -245,6 +248,8 @@ void TrackArtist::UpdateSelectedPrefs( int id )
 {
    if( id == ShowClippingPrefsID())
       mShowClipping = gPrefs->Read(wxT("/GUI/ShowClipping"), mShowClipping);
+   if( id == ShowTrackNameInWaveformPrefsID())
+      mbShowTrackNameInTrack = gPrefs->ReadBool(wxT("/GUI/ShowTrackNameInWaveform"), false);
 }
 
 void TrackArtist::UpdatePrefs()
@@ -252,12 +257,64 @@ void TrackArtist::UpdatePrefs()
    mdBrange = gPrefs->Read(ENV_DB_KEY, mdBrange);
    mSampleDisplay = TracksPrefs::SampleViewChoice();
 
-   mbShowTrackNameInTrack =
-      gPrefs->ReadBool(wxT("/GUI/ShowTrackNameInWaveform"), false);
-
    UpdateSelectedPrefs( ShowClippingPrefsID() );
+   UpdateSelectedPrefs( ShowTrackNameInWaveformPrefsID() );
 
    SetColours(0);
+}
+
+void TrackArt::DrawClipAffordance(wxDC& dc, const wxRect& rect, bool highlight, bool selected)
+{
+   if (selected)
+   {
+      wxRect strokeRect{
+         rect.x - ClipSelectionStrokeSize,
+         rect.y,
+         rect.width + ClipSelectionStrokeSize * 2,
+         rect.height + ClipFrameRadius };
+      dc.SetBrush(*wxTRANSPARENT_BRUSH);
+      AColor::UseThemeColour(&dc, clrClipAffordanceStroke, clrClipAffordanceStroke);
+      dc.DrawRoundedRectangle(strokeRect, ClipFrameRadius);
+   }
+   AColor::UseThemeColour(&dc, highlight ? clrClipAffordanceActiveBrush : clrClipAffordanceInactiveBrush, clrClipAffordanceOutlinePen);
+   dc.DrawRoundedRectangle(wxRect(rect.x, rect.y + ClipSelectionStrokeSize, rect.width, rect.height + ClipFrameRadius), ClipFrameRadius);
+}
+
+void TrackArt::DrawClipEdges(wxDC& dc, const wxRect& clipRect, bool selected)
+{
+   dc.SetBrush(*wxTRANSPARENT_BRUSH);
+   {
+      AColor::UseThemeColour(&dc, -1, clrClipAffordanceOutlinePen);
+      AColor::Line(dc,
+         clipRect.GetLeft(), clipRect.GetTop(),
+         clipRect.GetLeft(), clipRect.GetBottom());
+      AColor::Line(dc,
+         clipRect.GetRight(), clipRect.GetTop(),
+         clipRect.GetRight(), clipRect.GetBottom());
+   }
+   if(selected)
+   {
+      if constexpr (ClipSelectionStrokeSize == 1)
+      {
+         AColor::UseThemeColour(&dc, -1, clrClipAffordanceStroke);
+         AColor::Line(dc,
+            clipRect.GetLeft() - ClipSelectionStrokeSize, clipRect.GetTop(),
+            clipRect.GetLeft() - ClipSelectionStrokeSize, clipRect.GetBottom());
+         AColor::Line(dc,
+            clipRect.GetRight() + ClipSelectionStrokeSize, clipRect.GetTop(),
+            clipRect.GetRight() + ClipSelectionStrokeSize, clipRect.GetBottom());
+      }
+      else if constexpr (ClipSelectionStrokeSize > 1)
+      {
+         AColor::UseThemeColour(&dc, clrClipAffordanceStroke, clrClipAffordanceStroke);
+         dc.DrawRectangle(wxRect(
+            clipRect.GetLeft() - ClipSelectionStrokeSize, clipRect.GetTop(),
+            ClipSelectionStrokeSize, clipRect.GetHeight()));
+         dc.DrawRectangle(wxRect(
+            clipRect.GetRight() + 1, clipRect.GetTop(),
+            ClipSelectionStrokeSize, clipRect.GetHeight()));
+      }
+   }
 }
 
 // Draws the sync-lock bitmap, tiled; always draws stationary relative to the DC
